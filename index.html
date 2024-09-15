@@ -1,140 +1,68 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Custom Video Streaming</title>
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      text-align: center;
-      background-color: #f4f4f9;
-      padding: 20px;
-    }
-    .container {
-      max-width: 800px;
-      margin: 0 auto;
-    }
-    .form-group {
-      margin: 20px 0;
-    }
-    iframe, .video-container {
-      width: 100%;
-      max-width: 800px;
-      height: 450px;
-      margin-top: 20px;
-    }
-    .title {
-      font-size: 1.5em;
-      margin-top: 10px;
-    }
-    .description {
-      color: #555;
-      font-size: 1.1em;
-      margin-bottom: 20px;
-    }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Facebook Login Integration</title>
 </head>
 <body>
+    <h1>Login with Facebook</h1>
+    <button onclick="loginWithFacebook()">Login with Facebook</button>
 
-  <div class="container">
-    <h1>Select Video to Stream</h1>
+    <!-- Load the Facebook SDK for JavaScript -->
+    <script>
+      window.fbAsyncInit = function() {
+        FB.init({
+          appId      : '488359350781504', // Your App ID
+          cookie     : true,  // Enable cookies to allow the server to access the session.
+          xfbml      : true,  // Parse social plugins on this webpage.
+          version    : 'v13.0' // Use this Graph API version for this call.
+        });
 
-    <!-- Form to input video link, Facebook ID, title, and description -->
-    <div class="form-group">
-      <label for="videoLink">Video Link (for hosted video):</label>
-      <input type="text" id="videoLink" placeholder="Enter video link" style="width: 100%; padding: 10px;">
-    </div>
+        FB.AppEvents.logPageView(); // Log page view event
+      };
 
-    <div class="form-group">
-      <label for="fbVideoID">Facebook Video ID:</label>
-      <input type="text" id="fbVideoID" placeholder="Enter Facebook Video ID" style="width: 100%; padding: 10px;">
-    </div>
+      // Load the SDK asynchronously
+      (function(d, s, id){
+        var js, fjs = d.getElementsByTagName(s)[0];
+        if (d.getElementById(id)) {return;}
+        js = d.createElement(s); js.id = id;
+        js.src = "https://connect.facebook.net/en_US/sdk.js";
+        fjs.parentNode.insertBefore(js, fjs);
+      }(document, 'script', 'facebook-jssdk'));
 
-    <div class="form-group">
-      <label for="fbTitle">Facebook Title:</label>
-      <input type="text" id="fbTitle" placeholder="Enter Facebook stream title" style="width: 100%; padding: 10px;">
-    </div>
+      function loginWithFacebook() {
+        FB.login(function(response) {
+          if (response.authResponse) {
+            // User is logged in and authenticated
+            const accessToken = response.authResponse.accessToken;
+            console.log('Access Token:', accessToken);
 
-    <div class="form-group">
-      <label for="fbDescription">Facebook Description:</label>
-      <textarea id="fbDescription" placeholder="Enter Facebook stream description" rows="3" style="width: 100%; padding: 10px;"></textarea>
-    </div>
-
-    <button onclick="displayVideo()" style="padding: 10px 20px; font-size: 1em;">Display Video</button>
-
-    <!-- Container for the video and stream details -->
-    <div id="videoContainer" class="video-container">
-      <!-- This section will be dynamically updated based on user input -->
-    </div>
-
-    <div id="streamDetails">
-      <h2 id="streamTitle" class="title"></h2>
-      <p id="streamDescription" class="description"></p>
-    </div>
-  </div>
-
-  <script>
-    function displayVideo() {
-      // Get the user input values
-      const videoLink = document.getElementById('videoLink').value;
-      const fbVideoID = document.getElementById('fbVideoID').value;
-      const fbTitle = document.getElementById('fbTitle').value;
-      const fbDescription = document.getElementById('fbDescription').value;
-
-      // Get the video container and title/description elements
-      const videoContainer = document.getElementById('videoContainer');
-      const streamTitle = document.getElementById('streamTitle');
-      const streamDescription = document.getElementById('streamDescription');
-
-      // Clear any existing video content
-      videoContainer.innerHTML = '';
-      streamTitle.textContent = '';
-      streamDescription.textContent = '';
-
-      // Check if a video link is provided (external hosted video)
-      if (videoLink) {
-        // Embed the video link (assuming it's a YouTube or other embeddable URL)
-        videoContainer.innerHTML = `<iframe src="${videoLink}" frameborder="0" allowfullscreen></iframe>`;
+            // Send the access token to your server for further processing
+            fetch('/handle-token.php', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify({ accessToken })
+            })
+            .then(response => response.json())
+            .then(data => {
+              console.log('Server response:', data);
+              if (data.success) {
+                // Handle successful login
+                alert('Login successful!');
+              } else {
+                // Handle errors
+                alert('Error: ' + data.message);
+              }
+            });
+          } else {
+            // User failed to log in
+            alert('User cancelled login or failed.');
+          }
+        }, {scope: 'public_profile,email'}); // Request necessary permissions
       }
-      // If no external video link, check if a Facebook video ID is provided
-      else if (fbVideoID) {
-        // Embed the Facebook video using the Video ID
-        videoContainer.innerHTML = `
-          <div class="fb-video" data-href="https://www.facebook.com/${fbVideoID}" data-width="auto" data-show-text="false">
-            <blockquote cite="https://www.facebook.com/${fbVideoID}" class="fb-xfbml-parse-ignore">
-              <a href="https://www.facebook.com/${fbVideoID}">Watch on Facebook</a>
-            </blockquote>
-          </div>
-        `;
-
-        // Display the custom title and description
-        streamTitle.textContent = fbTitle;
-        streamDescription.textContent = fbDescription;
-      }
-
-      // Re-initialize Facebook SDK to render the new video embed
-      if (window.FB) {
-        window.FB.XFBML.parse();
-      }
-    }
-
-    // Load the Facebook SDK for JavaScript
-    window.fbAsyncInit = function() {
-      FB.init({
-        xfbml: true,
-        version: 'v11.0'
-      });
-    };
-
-    (function(d, s, id) {
-      var js, fjs = d.getElementsByTagName(s)[0];
-      if (d.getElementById(id)) return;
-      js = d.createElement(s); js.id = id;
-      js.src = "https://connect.facebook.net/en_US/sdk.js#xfbml=1&version=v11.0";
-      fjs.parentNode.insertBefore(js, fjs);
-    }(document, 'script', 'facebook-jssdk'));
-  </script>
-
+    </script>
 </body>
 </html>
